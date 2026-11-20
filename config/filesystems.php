@@ -24,7 +24,7 @@ return [
     | may even configure multiple disks for the same driver. Examples for
     | most supported storage drivers are configured here for reference.
     |
-    | Supported drivers: "local", "ftp", "sftp"
+    | Supported drivers: "local", "ftp", "sftp", "s3"
     |
     */
 
@@ -45,6 +45,13 @@ return [
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
+        ],
+
+        's3' => [
+            'driver' => 's3',
+            'region' => env('AWS_DEFAULT_REGION', 'eu-central-1'),
+            'bucket' => env('AWS_BUCKET'),
+            'throw' => true,
         ],
 
     ],

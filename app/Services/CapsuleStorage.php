@@ -2,17 +2,17 @@
 
 namespace App\Services;
 
-use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Filesystem\AwsS3V3Adapter;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 /**
  * The only place in the app that touches uploaded files.
  *
- * Files are saved in a folder on the local disk (config timecapsule.upload_dir).
- * Controllers only call save(), delete() and stream(); they never work with paths themselves,
- * so the way files are stored can be changed here without touching the rest of the app.
+ * Attachments are stored in a private S3 bucket under uploads/.
  */
 class CapsuleStorage
 {
@@ -28,39 +28,55 @@ class CapsuleStorage
     /** Saves the uploaded file under a random name and returns that name. */
     public function save(UploadedFile $file): string
     {
-        // Never use the user's file name on disk: random name + an extension we trust.
-        $name = bin2hex(random_bytes(16)).'.'.self::EXTENSIONS[$file->getMimeType()];
-        $this->disk()->putFileAs('', $file, $name);
+        $mime = $file->getMimeType();
+        $name = bin2hex(random_bytes(16)).'.'.self::EXTENSIONS[$mime];
+
+        // The bucket has ACLs disabled; upload without an ACL header.
+        $this->disk()->getClient()->putObject([
+            'Bucket' => config('filesystems.disks.s3.bucket'),
+            'Key' => $this->key($name),
+            'SourceFile' => $file->getPathname(),
+            'ContentType' => $mime,
+        ]);
 
         return $name;
     }
 
     public function delete(string $name): void
     {
-        $this->disk()->delete($name);
+        $this->disk()->delete($this->key($name));
     }
 
     /**
-     * Sends the file to the browser through the app (files are never in the public/ folder,
-     * so access rules are always checked first).
+     * Redirects to S3 after the controller has checked the capsule's access rules.
      * Images are shown inline; PDFs and "?download=1" are downloaded as attachments.
      */
-    public function stream(string $name, string $downloadName, string $mime, bool $download): StreamedResponse
+    public function stream(string $name, string $downloadName, string $mime, bool $download): RedirectResponse
     {
-        $disk = $this->disk();
-        abort_unless($disk->exists($name), 404);
-
         $inline = ! $download && str_starts_with($mime, 'image/');
+        $filename = trim(preg_replace('/[\x00-\x1f\x7f]/', '', str_replace(['/', '\\'], '_', $downloadName)));
+        $filename = $filename !== '' ? $filename : $name;
+        $fallback = trim(str_replace('%', '', Str::ascii($filename)));
 
-        return $disk->response($name, $downloadName, ['Content-Type' => $mime], $inline ? 'inline' : 'attachment');
+        $url = $this->disk()->temporaryUrl($this->key($name), now()->addMinutes(5), [
+            'ResponseContentType' => $mime,
+            'ResponseContentDisposition' => HeaderUtils::makeDisposition(
+                $inline ? 'inline' : 'attachment',
+                $filename,
+                $fallback !== '' ? $fallback : $name,
+            ),
+        ]);
+
+        return redirect()->away($url)->header('Cache-Control', 'private, no-store');
     }
 
-    /** A "local" disk whose root is UPLOAD_DIR (the folder is created if it is missing). */
-    private function disk(): Filesystem
+    private function key(string $name): string
     {
-        return Storage::build([
-            'driver' => 'local',
-            'root' => config('timecapsule.upload_dir'),
-        ]);
+        return 'uploads/'.$name;
+    }
+
+    private function disk(): AwsS3V3Adapter
+    {
+        return Storage::disk('s3');
     }
 }
