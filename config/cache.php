@@ -27,7 +27,7 @@ return [
     | same cache driver to group types of items stored in your caches.
     |
     | Supported drivers: "array", "database", "file", "memcached",
-    |                    "redis", "octane",
+    |                    "redis", "dynamodb", "octane",
     |                    "failover", "null"
     |
     */
@@ -51,6 +51,15 @@ return [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
             'lock_path' => storage_path('framework/cache/data'),
+        ],
+
+        // Sessions shared by all app servers (SESSION_DRIVER=dynamodb). No access keys here:
+        // the AWS SDK takes temporary credentials from the EC2 instance role.
+        'dynamodb' => [
+            'driver' => 'dynamodb',
+            'region' => env('AWS_DEFAULT_REGION', 'eu-central-1'),
+            'table' => env('DYNAMODB_CACHE_TABLE', 'timecapsule-dev-sessions'),
+            'endpoint' => env('DYNAMODB_ENDPOINT'),
         ],
 
         'memcached' => [
