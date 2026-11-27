@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCapsuleRequest;
 use App\Models\Capsule;
 use App\Services\CapsuleStorage;
+use App\Services\EventPublisher;
 use App\Services\Mailer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ class CapsuleController extends Controller
     public function __construct(
         private CapsuleStorage $storage,
         private Mailer $mailer,
+        private EventPublisher $events,
     ) {}
 
     /** GET / — the current user's capsules, the soonest to open first. */
@@ -61,12 +63,19 @@ class CapsuleController extends Controller
 
         $openAt = $capsule->open_at->format('j M Y, H:i').' UTC';
 
-        // "Send" the confirmation email. This makes the request wait MAIL_DELAY_SECONDS.
-        $this->mailer->send(
-            $capsule,
-            $capsule->recipient_email ?: $user->email,
-            "Capsule \"{$capsule->title}\" was sealed for you until {$openAt}."
-        );
+        $recipient = $capsule->recipient_email ?: $user->email;
+
+        if (config('timecapsule.events_topic_arn')) {
+            // Lab 7: publish capsule.sealed and answer at once; Lambda sends the "email".
+            $this->events->capsuleSealed($capsule, $recipient);
+        } else {
+            // "Send" the confirmation email. This makes the request wait MAIL_DELAY_SECONDS.
+            $this->mailer->send(
+                $capsule,
+                $recipient,
+                "Capsule \"{$capsule->title}\" was sealed for you until {$openAt}."
+            );
+        }
 
         return redirect("/capsules/{$capsule->id}")->with('success', 'Capsule sealed.');
     }

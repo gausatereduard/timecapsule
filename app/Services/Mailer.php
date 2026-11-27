@@ -29,6 +29,7 @@ class Mailer
             'user_id' => $capsule->user_id,   // the capsule owner sees it on /notifications
             'recipient' => $recipient,
             'message' => $message,
+            'kind' => 'sealed',
         ]);
     }
 }

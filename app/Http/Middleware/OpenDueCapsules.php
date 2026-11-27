@@ -18,7 +18,10 @@ class OpenDueCapsules
 
     public function handle(Request $request, Closure $next): Response
     {
-        $this->opener->openDue();
+        // Lab 7: with an events topic the opener Lambda opens capsules on a schedule.
+        if (! config('timecapsule.events_topic_arn')) {
+            $this->opener->openDue();
+        }
 
         return $next($request);
     }

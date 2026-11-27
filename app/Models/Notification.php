@@ -11,7 +11,7 @@ class Notification extends Model
 {
     const UPDATED_AT = null;
 
-    protected $fillable = ['capsule_id', 'user_id', 'recipient', 'message'];
+    protected $fillable = ['capsule_id', 'user_id', 'recipient', 'message', 'kind'];
 
     protected function casts(): array
     {

@@ -37,6 +37,7 @@ class CapsuleOpener
                 'user_id' => $row->user_id,   // the capsule owner sees it on /notifications
                 'recipient' => $row->recipient_email ?: $row->email,
                 'message' => "Your capsule \"{$row->title}\" is now open.",
+                'kind' => 'opened',
             ]);
         }
 

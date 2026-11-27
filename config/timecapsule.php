@@ -22,6 +22,13 @@ return [
     // How long the fake "email sending" takes when a capsule is created (imitates a slow SMTP server).
     'mail_delay_seconds' => (int) env('MAIL_DELAY_SECONDS', 3),
 
+    // Lab 7: background jobs. With EVENTS_TOPIC_ARN set, sealing a capsule only publishes
+    // capsule.sealed to SNS (the mailer Lambda writes the notification), and capsules are
+    // opened by the opener Lambda on a schedule instead of during web requests.
+    // Empty = the old behaviour: send in the request and open on every request.
+    'events_topic_arn' => env('EVENTS_TOPIC_ARN'),
+    'aws_region' => env('AWS_DEFAULT_REGION', 'eu-central-1'),
+
     // Folder on the local disk where uploaded attachments are saved.
     // Empty = storage/app/uploads. A relative path is relative to the project folder.
     'upload_dir' => match (true) {
