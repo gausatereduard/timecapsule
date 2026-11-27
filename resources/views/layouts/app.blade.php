@@ -72,7 +72,7 @@
 {{-- Infrastructure info: which machine answered, which database and which file storage it uses. --}}
 <footer class="site-footer">
   <div class="container">
-    <strong>LR6</strong> · Served by <code>{{ gethostname() }}</code> · From <code>Ed Gausater</code> Repository ·  DB: <code>{{ config('database.connections.'.config('database.default').'.host') }}</code> · Files: <code>{{ config('filesystems.disks.s3.bucket') }}</code>
+    <strong>LR7</strong> · Served by <code>{{ gethostname() }}</code> · From <code>Ed Gausater</code> Repository ·  DB: <code>{{ config('database.connections.'.config('database.default').'.host') }}</code> · Files: <code>{{ config('filesystems.disks.s3.bucket') }}</code>
   </div>
 </footer>
 
